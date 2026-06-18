@@ -57,13 +57,14 @@ def parse_srt(fp):
     return out
 
 def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     ap.add_argument("srt")
     ap.add_argument("--name", default="字幕草稿")
     ap.add_argument("--effect", default=None, help="花字名（见 references/花字清单.md）")
     ap.add_argument("--anim", default=None, help="入场动画名（见 references/动画清单.md）")
     # 用户默认预设（黄字黑底描边 + 4:3 画布 + 贴底）
-    ap.add_argument("--font-size", type=int, default=7)
+    ap.add_argument("--font-size", type=int, default=10, help="字幕字号")
+    ap.add_argument("--line-spacing", type=float, default=13, help="字幕行间距")
     ap.add_argument("--width", type=int, default=1440)
     ap.add_argument("--height", type=int, default=1080)
     ap.add_argument("--text-color", default="#FFDE00")
@@ -95,6 +96,7 @@ def main():
         "draft_url": durl,
         "captions": json.dumps(caps, ensure_ascii=False),
         "font_size": a.font_size,
+        "line_spacing": a.line_spacing,
         "text_color": a.text_color,
         "border_color": a.border_color,
         "transform_y": a.transform_y,

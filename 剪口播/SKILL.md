@@ -1,6 +1,9 @@
 ---
 name: videocut:剪口播
 description: 口播视频转录和口误识别。生成审查稿和删除任务清单。触发词：剪口播、处理视频、识别口误
+author: chengfeng / AI产品自由
+source: https://github.com/Agentchengfeng/videocut-skills
+official_accounts: GitHub @Agentchengfeng；X @chengfeng240928；小红书/公众号/B站/抖音/视频号 @AI产品自由
 ---
 
 <!--
@@ -98,7 +101,7 @@ curl -s -F "files[]=@audio.mp3" https://uguu.se/upload
 # 返回: {"success":true,"files":[{"url":"https://h.uguu.se/xxx.mp3"}]}
 
 # 3. 调用火山引擎 API
-SKILL_DIR="/Users/chengfeng/Desktop/AIos/剪辑Agent/.claude/skills/剪口播"
+SKILL_DIR="/Volumes/成峰/代码/剪辑Agent/.claude/skills/剪口播"
 "$SKILL_DIR/scripts/volcengine_transcribe.sh" "https://h.uguu.se/xxx.mp3"
 # 输出: volcengine_result.json
 ```
@@ -183,6 +186,28 @@ console.log('≥0.2s静音数量:', selected.length);
 
 → 输出 `auto_selected.json`（只含静音 idx）
 
+#### 5.4b 头尾裁剪（转录盲区，必做）
+
+> 🚨 火山只转语音，**结尾的未转录杂音/收尾动作不在字幕里，所有检测器都看不见**。必须比对视频时长补出来。见 `用户习惯/3-静音段处理.md`。
+
+```bash
+VDUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "file:$VIDEO_PATH")
+node -e "
+const fs=require('fs');
+const w=require('../1_转录/subtitles_words.json');
+const auto=require('./auto_selected.json');
+const VDUR=$VDUR, last=w[w.length-1];
+if(VDUR - last.end > 0.3){            // 结尾未覆盖 → 补尾元素并预选
+  w.push({text:'',start:last.end,end:VDUR,isGap:true,reason:'结尾未转录(杂音/收尾)'});
+  auto.push(w.length-1);
+  fs.writeFileSync('../1_转录/subtitles_words.json',JSON.stringify(w));
+  fs.writeFileSync('./auto_selected.json',JSON.stringify([...new Set(auto)].sort((a,b)=>a-b),null,1));
+  console.log('补尾元素 idx',w.length-1,'['+last.end+'→'+VDUR+']');
+} else console.log('尾部已覆盖');
+if(w[0].start>0.3) console.log('⚠️ 开头',w[0].start,'s 未覆盖，考虑补头元素');
+"
+```
+
 #### 5.5 AI 分析口误（追加到 auto_selected.json）
 
 > 🚨 **核心原则：删前保后。所有重复/口误，删前面的，保后面的。**
@@ -200,6 +225,12 @@ console.log('≥0.2s静音数量:', selected.length);
 **脚本可直接处理（不需要 AI）**：
 - 卡顿词（那个那个、就是就是）→ 正则匹配
 - 语气词（嗯、啊、呃）→ 标记待人工确认
+
+**复核（verify）—— 按风险投放，不要铺满**（见 `用户习惯/10-删除风险分层.md`）：
+
+- **低风险免验**：静音、逐字子集重复（删的是保留内容的逐字开头，如删「我把同一句」保「我把同一句话」）、≤3字纯卡壳/语气词 → 直接进 auto_selected，交网页人工兜底。
+- **高风险必验**：整句删除、"开头撞结尾岔"（如「超出了**预算**」vs「超出了**路线规划能力**」）、长片段重复 → 派对抗 reviewer 复核，确认没把独有内容删掉。
+- 教训：曾对全部候选铺开 2× 复核，命中仅 ~4/91 且全落在高风险类（见 `log/`）。verify 很贵，砸在容易删错的地方就好。
 
 **Agent prompt 模板**：
 
@@ -258,6 +289,12 @@ readable.txt 格式: idx|内容|时间
 |------|---------|----------|------|
 | 7 | 266-275 | "为了解释为了回答这个"未完成 | 删整句 |
 ```
+
+#### 5.6 口播稿对齐补漏（有口播稿时）
+
+若用户提供口播稿/原文稿（口播是照稿读的），用它做**句子级对齐**补漏 —— 见 `用户习惯/11-口播稿对齐.md`。
+
+口播稿 = **语义** ground truth（措辞会变，如"两个模型"↔"两个大模型"，别逐字 diff）。把每个转录句对齐到口播稿句，抓纯文本检测漏掉的**整句级口误**：整句重说、残句、无对应口误 —— 尤其**技术名词卡壳**（Mindverse / δ-mem / LoRA 念错重来、"Delta Mam"、孤立单字"从"）。这类整句删除属高风险 → 走复核，确认保留版覆盖了口播稿原意。
 
 ### 步骤 6-7: 审核
 
@@ -323,7 +360,7 @@ node "$SKILL_DIR/scripts/review_server.js" 8899 "$VIDEO_PATH"
 ### 火山引擎 API Key
 
 ```bash
-cd /Users/chengfeng/Desktop/AIos/剪辑Agent/.claude/skills
+cd /Volumes/成峰/代码/剪辑Agent/.claude/skills
 cp .env.example .env
 # 编辑 .env 填入 VOLCENGINE_API_KEY=xxx
 ```

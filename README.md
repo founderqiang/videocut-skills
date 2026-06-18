@@ -2,6 +2,25 @@
 
 > 用 Claude Code Skills 构建的视频剪辑 Agent，专为口播视频设计
 
+## 官方来源
+
+本项目由 **chengfeng / AI产品自由** 原创并维护。
+
+- GitHub: https://github.com/Agentchengfeng
+- X: https://x.com/chengfeng240928
+- 小红书：AI产品自由
+- 公众号：AI产品自由
+- B站：AI产品自由
+- 抖音 / 视频号：AI产品自由
+
+原始仓库：
+
+```text
+https://github.com/Agentchengfeng/videocut-skills
+```
+
+如果你使用、转载、翻译、二次发布或改造成自己的 Skill，请保留原作者和原始仓库链接。
+
 ## 为什么做这个？
 
 剪映的"智能剪口播"有两个痛点：
@@ -36,7 +55,7 @@
 
 ```bash
 # 克隆到 Claude Code skills 目录
-git clone https://github.com/Ceeon/videocut-skills.git ~/.claude/skills/videocut
+git clone https://github.com/Agentchengfeng/videocut-skills.git ~/.claude/skills/videocut
 ```
 
 ### 2. 配置 API Key
@@ -117,14 +136,18 @@ AI 会自动：
 | `安装` | 环境准备 | 无 | 安装日志 |
 | `剪口播` | 转录 + AI 审核 + 剪辑 | 视频文件 | 剪辑后视频 |
 | `高清化` | 2-pass + 锐化导出 | 视频文件 | 高清视频 |
-| `字幕` | 生成字幕 | 视频文件 | 带字幕视频 |
+| `导入字幕` | 剪后视频直转字幕 + 推送剪映草稿（默认字号 10 / 行间距 13） | 剪后视频 + 可选原稿 | SRT + 剪映草稿 |
 | `自更新` | 记录偏好 | 用户反馈 | 更新规则文件 |
+| `口播成片` | 分镜稿 + 时间线预览 + 合成导出 | 文章/口播稿/SRT + 视频 + HTML素材 | 3:4 固定帧、一页一源视觉；动画标注默认 RoughJS，时间线预览 + 竖版成片 |
 
 ## 目录结构
 
 ```
 videocut/
 ├── README.md           # 本文件
+├── LICENSE             # MIT 开源协议
+├── NOTICE.md           # 官方来源与转载归属声明
+├── CITATION.cff        # GitHub 引用信息
 ├── .env.example        # API Key 模板
 ├── 安装/               # 环境安装 skill
 ├── 剪口播/             # 核心：转录 + AI 审核 + 剪辑
@@ -140,12 +163,19 @@ videocut/
 │       ├── 6-句内重复检测.md   # A+中间+A 模式
 │       ├── 7-连续语气词.md     # 嗯啊、啊呃
 │       └── 8-重说纠正.md       # 部分重复、否定纠正
-├── 字幕/               # 字幕生成与烧录
-│   └── 词典.txt        # 自定义词典
+├── 导入字幕/           # 字幕生成与剪映草稿推送
+│   ├── SKILL.md
+│   └── scripts/
 ├── 高清化/             # 2-pass + 锐化导出
 │   └── scripts/
 │       └── hd_export.sh
-└── 自更新/             # 自我进化机制
+├── 自更新/             # 自我进化机制
+└── 口播成片/           # 分镜稿 -> 时间线预览 -> 合成
+    ├── SKILL.md
+    ├── templates/
+    ├── references/
+    ├── agents/
+    └── scripts/
 ```
 
 ## 技术架构

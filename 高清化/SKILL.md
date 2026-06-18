@@ -1,6 +1,9 @@
 ---
 name: videocut:高清化
 description: 视频高清导出。2-pass编码+锐化，匹配或超越原片画质。触发词：高清化、高清导出、导出高清、渲染高清
+author: chengfeng / AI产品自由
+source: https://github.com/Agentchengfeng/videocut-skills
+official_accounts: GitHub @Agentchengfeng；X @chengfeng240928；小红书/公众号/B站/抖音/视频号 @AI产品自由
 ---
 
 <!--
@@ -65,7 +68,7 @@ VIDEO=$(find "$OUTPUT_DIR/剪口播/3_审核" -name "*_cut.mp4" -type f 2>/dev/n
 ### 步骤 1-4: 执行高清化
 
 ```bash
-SKILL_DIR="/Users/chengfeng/Desktop/AIos/剪辑Agent/.claude/skills/高清化"
+SKILL_DIR="/Volumes/成峰/代码/剪辑Agent/.claude/skills/高清化"
 
 # 简单用法：自动检测参数，1.2x 码率，2-pass
 bash "$SKILL_DIR/scripts/hd_export.sh" input.mp4

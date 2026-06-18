@@ -31,7 +31,8 @@ save_draft    → 写入 ~/Movies/JianyingPro/User Data/Projects/com.lveditor.dr
 {
   "draft_url": "...",
   "captions": "[{...}, {...}]",        // ⚠️ JSON 字符串，不是数组
-  "font_size": 15,
+  "font_size": 10,
+  "line_spacing": 13,
   "bold": true,
   "has_shadow": true
 }

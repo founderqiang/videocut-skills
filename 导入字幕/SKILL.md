@@ -1,6 +1,9 @@
 ---
 name: videocut:导入字幕
 description: 视频转录 + AI校对 → 一键生成带花字的剪映草稿（默认）/ 或导出 SRT 文件。触发词：导入字幕、导出字幕、生成剪映草稿、带花字字幕、生成SRT
+author: chengfeng / AI产品自由
+source: https://github.com/Agentchengfeng/videocut-skills
+official_accounts: GitHub @Agentchengfeng；X @chengfeng240928；小红书/公众号/B站/抖音/视频号 @AI产品自由
 ---
 
 <!--
@@ -25,15 +28,13 @@ pos: 剪辑完成后，把字幕导入剪映
 
 ## 开工前确认（必做）
 
-向用户确认两件事：
+向用户确认（只问原稿，**不问花字/动画**）：
 
 1. **有没有口播原稿 或 错词字典？**（用于校对产品名/术语）
    - 有口播稿 → 要求用户给出原稿路径，准确率 99%
    - 有字典 → 要求用户给出字典路径（参考 [references/错词字典模板.md](references/错词字典模板.md)），准确率 95%+
    - 两样都没 → 按音频识别结果走，提醒用户专名可能不准（95%）
-2. **花字 / 入场动画偏好？**（可选）
-   - 默认不加
-   - 常用清单见 [references/花字清单.md](references/花字清单.md) 和 [references/动画清单.md](references/动画清单.md)
+**花字 / 入场动画：默认不加，不要问。** 只有用户主动说"带花字""加动画"才加（清单见 [references/花字清单.md](references/花字清单.md) 和 [references/动画清单.md](references/动画清单.md)）。〔2026-06-17 用户明确要求：以后别问花字，默认不加〕
 
 ## 快速使用
 
@@ -89,14 +90,13 @@ CUT_VIDEO=$(find "$OUTPUT_DIR/剪口播/3_审核" -name "*_cut.mp4" -type f 2>/d
 VIDEO_PATH="${CUT_VIDEO:-用户传入的路径}"
 ```
 
-⚠️ 字幕必须基于**剪辑后视频**，不能用原始视频（时间戳不匹配）。
+⚠️ 字幕 / 文字稿必须基于**剪辑后视频重新转录**，不能用原始视频或 `delete_segments.json` 反推（容易误删内容，时间戳也可能不匹配）。
 
 ### 跟用户确认原稿
 
 ```
-你: 开始前先问一下——
-   1. 有没有口播原稿？（有的话请给路径，没有的话产品名/术语可能不准）
-   2. 要不要加花字和入场动画？（可选，默认不加）
+你: 开始前先问一下——有没有口播原稿？（有的话请给路径，没有的话产品名/术语可能不准）
+   （花字/动画默认不加，不要问；用户主动要求才加）
 ```
 
 **用户没回复原稿这一项，就等用户明确回复再继续**，不要自己假设"没有"。
@@ -146,7 +146,8 @@ fs.writeFileSync('subtitles_with_time.json', JSON.stringify(subtitles, null, 2))
 ### 有原稿时
 
 - 对照原稿验证产品名、术语
-- **原稿没有的 = 删除**（剪口播已剪掉）
+- 原稿只用于校对专名和术语，**不能因为原稿没有就删除字幕**
+- 剪后视频里实际说了的内容必须保留；只修识别错字，不把口播压成摘要
 - **不从原稿往字幕补内容**
 
 ---
@@ -163,7 +164,8 @@ python3 scripts/srt_to_draft.py output/*/字幕/3_输出/video.srt \
 - `--name` 草稿名
 - `--effect` 花字（可选，见 [references/花字清单.md](references/花字清单.md)）
 - `--anim` 入场动画（可选，见 [references/动画清单.md](references/动画清单.md)）
-- 其余样式参数（字号/画布/颜色/描边/位置）走默认预设，想改查代码或传参覆盖
+- 默认样式：字号 `10`、行间距 `13`、黄字、黑描边、贴底、4:3 画布
+- 样式可传参覆盖：`--font-size`、`--line-spacing`、`--width`、`--height`、`--text-color`、`--border-color`、`--transform-y`
 
 关闭服务：`bash scripts/stop.sh`
 
