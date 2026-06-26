@@ -39,12 +39,25 @@ function loadPlaywright() {
   throw new Error("Unable to load Playwright. Install it locally or set PLAYWRIGHT_MODULE.");
 }
 
-function findChromeExecutable(explicitPath) {
+function findHeadlessShellCandidates() {
+  const cacheDir = path.join(process.env.HOME || "", "Library", "Caches", "ms-playwright");
+  if (!cacheDir || !fs.existsSync(cacheDir)) return [];
+  return fs
+    .readdirSync(cacheDir)
+    .filter((name) => name.startsWith("chromium_headless_shell-"))
+    .sort()
+    .reverse()
+    .map((name) => path.join(cacheDir, name, "chrome-headless-shell-mac-arm64", "chrome-headless-shell"))
+    .filter((candidate) => fs.existsSync(candidate));
+}
+
+function findBrowserExecutable(explicitPath) {
   const candidates = [
     explicitPath,
     process.env.CHROME_EXECUTABLE,
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    ...findHeadlessShellCandidates(),
     "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   ].filter(Boolean);
 
   return candidates.find((candidate) => fs.existsSync(candidate)) || "";
@@ -69,11 +82,17 @@ async function main() {
   const player = args.player || "final-player.html";
   const playerUrl = args["player-url"] || "";
   const fps = Number(args.fps || 30);
+  const hasExplicitSize = Boolean(args.width || args.height);
   const width = Number(args.width || userConfig.width);
   const height = Number(args.height || userConfig.height);
+  const deviceScaleFactor = Number(
+    args["device-scale-factor"] || args.dpr || args.scale || (hasExplicitSize ? 1 : userConfig.deviceScaleFactor || 1)
+  );
+  const outputWidth = Math.round(width * deviceScaleFactor);
+  const outputHeight = Math.round(height * deviceScaleFactor);
   const stageSelector = args.stage || "#stage";
   const framesDir = path.resolve(projectDir, args["frames-dir"] || "renders/final-video-frames");
-  const output = path.resolve(projectDir, args.output || `renders/final-${width}x${height}.mp4`);
+  const output = path.resolve(projectDir, args.output || `renders/final-${outputWidth}x${outputHeight}.mp4`);
   const tempVideo = path.resolve(projectDir, args["temp-video"] || "renders/final-video-only.mp4");
   const quality = Number(args.quality || 100);
   const requestedFrameFormat = String(args["frame-format"] || args["image-format"] || "png").toLowerCase();
@@ -87,6 +106,7 @@ async function main() {
   if (!fs.existsSync(inputVideo)) throw new Error(`Input video not found: ${inputVideo}`);
   console.log(`[config] ${userConfig.configPath}`);
   console.log(`[ratio] ${renderSummary(userConfig)}`);
+  console.log(`[capture] viewport=${width}x${height} dpr=${deviceScaleFactor} output=${outputWidth}x${outputHeight}`);
   console.log(`[frames] format=${frameFormat}${frameFormat === "jpeg" ? ` quality=${quality}` : ""}`);
   console.log(`[encode] preset=${preset} crf=${crf}`);
 
@@ -95,20 +115,22 @@ async function main() {
   fs.mkdirSync(path.dirname(output), { recursive: true });
 
   const { chromium } = loadPlaywright();
-  const chromeExecutable = findChromeExecutable(args["chrome-executable"]);
-  const launchOptions = chromeExecutable
-    ? { headless: true, executablePath: chromeExecutable }
-    : { headless: true };
+  const browserExecutable = findBrowserExecutable(args["chrome-executable"] || args["browser-executable"]);
+  const launchOptions = browserExecutable
+    ? { headless: true, executablePath: browserExecutable, timeout: Number(args["browser-timeout"] || 30000) }
+    : { headless: true, timeout: Number(args["browser-timeout"] || 30000) };
+  if (browserExecutable) console.log(`[browser] ${browserExecutable}`);
   const browser = await chromium.launch(launchOptions);
   const page = await browser.newPage({
     viewport: { width, height },
-    deviceScaleFactor: 1,
+    deviceScaleFactor,
   });
   page.setDefaultTimeout(0);
 
   const playerPath = path.join(projectDir, player);
   const targetUrl = playerUrl || `file://${playerPath}`;
-  await page.goto(targetUrl, { waitUntil: "load" });
+  await page.goto(targetUrl, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => typeof window.seekTo === "function");
 
   let duration = Number(args.duration || 0);
   if (!duration) {
@@ -130,6 +152,7 @@ async function main() {
     const screenshotOptions = {
       path: path.join(framesDir, frameName),
       type: frameFormat,
+      scale: "device",
     };
     if (frameFormat === "jpeg") screenshotOptions.quality = quality;
     await stage.screenshot(screenshotOptions);

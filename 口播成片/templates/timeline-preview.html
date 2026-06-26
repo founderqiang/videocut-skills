@@ -21,8 +21,8 @@
       --violet: #705489;
       --radius: 8px;
       --shadow: 0 12px 34px rgba(28, 22, 14, .08);
-      --frame-width: 1620px;
-      --frame-height: 2160px;
+      --frame-width: 1080px;
+      --frame-height: 1440px;
       --frame-ratio: 3 / 4;
       --stage-scale: 1;
     }
@@ -838,8 +838,8 @@
     const VIDEO_SRC = "{{SOURCE_VIDEO}}";
     const totalDuration = Number("{{TOTAL_DURATION}}");
     const NOTE_KEY = "{{NOTE_KEY}}";
-    const FRAME_WIDTH = Number("{{FRAME_WIDTH}}") || 1620;
-    const FRAME_HEIGHT = Number("{{FRAME_HEIGHT}}") || 2160;
+    const FRAME_WIDTH = Number("{{FRAME_WIDTH}}") || 1080;
+    const FRAME_HEIGHT = Number("{{FRAME_HEIGHT}}") || 1440;
     document.documentElement.style.setProperty("--frame-width", `${FRAME_WIDTH}px`);
     document.documentElement.style.setProperty("--frame-height", `${FRAME_HEIGHT}px`);
     document.documentElement.style.setProperty("--frame-ratio", `${FRAME_WIDTH} / ${FRAME_HEIGHT}`);

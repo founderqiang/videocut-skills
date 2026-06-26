@@ -71,9 +71,9 @@ https://github.com/Agentchengfeng/chengfeng-videocut-skills
 
 支持值：
 
-- `3:4`：默认竖屏高清，导出画布 `1620x2160`。
-- `16:9`：横屏，导出画布 `1920x1080`。
-- `4:3`：横屏，导出画布 `1440x1080`。
+- `3:4`：默认竖屏高清，逻辑画布 `1080x1440`，默认用 DPR `1.5` 导出 `1620x2160`。
+- `16:9`：横屏，逻辑画布和导出画布 `1920x1080`。
+- `4:3`：横屏，逻辑画布和导出画布 `1440x1080`。
 - `animationStyle`：默认 `xiaohei`，可选项来自 `动画/styles.json`。
 
 命令行参数优先级高于用户配置；没有显式参数时，导出脚本读取 `aspectRatio`，动画脚本读取 `animationStyle`。比例临时覆盖可用：
@@ -83,6 +83,7 @@ https://github.com/Agentchengfeng/chengfeng-videocut-skills
 --ratio 16:9
 --aspect-ratio 16:9
 --width 1920 --height 1080
+--dpr 1.5
 ```
 
 不要把视觉偏好、模板、编码质量、输出目录、字幕边距等七七八八的设置写进 `用户配置/default.json`。用户配置只放当前选择；动画目录只放可选项注册表和具体风格实现。
@@ -188,6 +189,7 @@ templates/storyboard-audit.html
 - 视频画面里不要出现素材路径、内部说明、动作解释或“原图素材 · img/xxx.png”这类工作台文字。分镜稿可以写来源，成片画面只保留观众需要看的内容。
 - 没有必要的标题就不放标题。结果页、表格页、原图对比页优先让主视觉自己说话，只保留短标签、模型名、指标名或必要的标注。
 - 数据对比页优先用清晰的表格、列对齐、短标签和少量高亮。字号要服务阅读，不要把字塞进小方块；能用简单表格讲清楚，就不要做复杂卡片堆叠。
+- 竖屏短视频里的表格不能只做成中间一条横向小表。数据阶段要把表格作为主视觉，占据主要安全区；前置任务说明、案例标签、总结句只在对应口播阶段出现，进入最终数据对比阶段后要消失或退到不占空间的位置。
 - 评价词只写口播明确说到或剪辑需要强调的正向 / 中性结果。对照项可以留空或只展示数据；不要额外加“慢且贵”等负面用词，除非口播原句就是这个判断。
 - 图标必须从动画库索引里找。ChatGPT、Claude、Flash 闪电、Step、DeepSeek、Qwen 等已有图标不得用抽象形状替代；新增用户给的 SVG，要先存入动画库并更新索引。
 
@@ -237,7 +239,7 @@ html-modules/xiaohei-*.html
 
 如果要新做解释动画，先读 `用户配置/default.json` 的 `animationStyle`，再到 `动画/styles.json` 找对应的动画子 Skill。
 
-每个动画动作必须绑定到具体口播句，不要平均分配时间。
+每个动画动作必须绑定到具体口播句，不要平均分配时间。多阶段 HTML 动画必须显式管理显隐状态：下一阶段出现时，上一阶段不再承担信息任务的说明卡、标签和注释要隐藏；不要让前一阶段继续占用主视觉空间，尤其是竖屏数据表、截图聚焦和结果页。
 
 ## 第 3 步：合成
 
@@ -264,11 +266,14 @@ node ~/.claude/skills/chengfeng-videocut-skills/口播成片/scripts/write_rende
 
 时间线预览和最终导出必须使用同一套 HTML 渲染上下文。HTML 模块在预览页和 `final-player.html` 里都要带 `?timeline=1&render=1`，预览页只负责把最终画布等比缩放进窗口，不能让模块按预览窗口重新响应式排版。
 
-如果预览和导出出现大小不一致，先检查 HTML 模块内部 CSS 和 `render-mode.js`，不要先重导整条视频。常见原因是预览 iframe 较小，看起来正常；最终高清画布触发了 `.photo-frame { max-width: ... }`、`.stage { width: min(...) }`、`.wrap { max-height: ... }`、`clamp(...)` 这类预览尺寸上限，导致导出变成“小图”。修复顺序：
+高清交付不能把 CSS 逻辑画布直接放大。默认 `3:4` 必须保持 `1080x1440` 逻辑画布，再用截图 DPR `1.5` 输出 `1620x2160`；否则表格、CSS 卡片、截图标注会在导出里相对变小，和预览不一致。
+
+如果预览和导出出现大小不一致，先检查 HTML 模块内部 CSS、`render-mode.js` 和导出 DPR，确认预览页与 final-player 的逻辑画布相同，不要先重导整条视频。常见原因是预览 iframe 较小，看起来正常；最终高清画布触发了 `.photo-frame { max-width: ... }`、`.stage { width: min(...) }`、`.wrap { max-height: ... }`、`clamp(...)` 这类预览尺寸上限，导致导出变成“小图”。修复顺序：
 
 1. 用 `write_render_mode.cjs` 重新生成 `html-modules/render-mode.js`。
 2. 在时间线预览里确认 HTML 模块 URL 已经变成 `?timeline=1&render=1`。
-3. 用 final-player 在实际导出 viewport 下抽该模块的关键帧，必要时用 `getBoundingClientRect()` 对比主视觉容器尺寸。
+3. 确认 `export_final_video.cjs` 的 `viewport` 是逻辑画布尺寸，`dpr` 才是高清倍数。
+4. 用 final-player 在实际导出 viewport 下抽该模块的关键帧，必要时用 `getBoundingClientRect()` 对比主视觉容器尺寸。
 
 导出最终视频：
 
@@ -319,6 +324,8 @@ node ~/.claude/skills/chengfeng-videocut-skills/口播成片/scripts/export_fina
 --frame-format png|jpeg
 --quality 100
 --crf 14
+--dpr 1.5
+--device-scale-factor 1.5
 ```
 
 ## 验收
@@ -333,6 +340,7 @@ node ~/.claude/skills/chengfeng-videocut-skills/口播成片/scripts/export_fina
 
 ```text
 1620x2160
+逻辑画布 1080x1440，DPR 1.5
 3:4
 30fps
 时长和剪后源视频一致
