@@ -1,0 +1,15 @@
+{
+  "name": "chengfeng-videocut-codex-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build server.mjs --target=node --format=esm --outfile=dist/server.mjs",
+    "test": "node scripts/runtime-preflight.test.cjs && node scripts/mcp-smoke-test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "1.0.1",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "zod": "3.25.76"
+  }
+}
